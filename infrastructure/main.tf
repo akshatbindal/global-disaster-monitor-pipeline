@@ -71,16 +71,20 @@ resource "google_bigquery_table" "demographics" {
 }
 
 # Create Cloud Storage bucket for Dataflow
-resource "google_storage_bucket" "dataflow_bucket" {
-  name          = "${var.project_id}-dataflow-${random_id.bucket_suffix.hex}"
+resource "google_storage_bucket" "dataflow_bucket1" {
+  name          = "dataflow-${var.project_id}-temp"
   location      = var.region
   force_destroy = true
 
   uniform_bucket_level_access = true
 }
 
-resource "random_id" "bucket_suffix" {
-  byte_length = 4
+resource "google_storage_bucket" "dataflow_bucket2" {
+  name          = "dataflow-${var.project_id}-staging"
+  location      = var.region
+  force_destroy = true
+
+  uniform_bucket_level_access = true
 }
 
 # Create service account for Dataflow

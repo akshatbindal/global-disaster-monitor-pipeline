@@ -152,7 +152,24 @@ class ImpactScoreCalculator(beam.DoFn):
 
 def run_pipeline():
     """Main pipeline function"""
-    
+
+    # List of required environment variables
+    required_env_vars = [
+        'GOOGLE_CLOUD_PROJECT',
+        'GOOGLE_CLOUD_REGION',
+        'DATAFLOW_TEMP_LOCATION',
+        'DATAFLOW_STAGING_LOCATION',
+        'DATAFLOW_SERVICE_ACCOUNT',
+        'DATAFLOW_JOB_NAME',
+        'PUBSUB_TOPIC',
+        'GOOGLE_GEOCODING_API_KEY',
+        'BIGQUERY_DATASET',
+        'BIGQUERY_TABLE_EVENTS'
+    ]
+    missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+    if missing_vars:
+        raise EnvironmentError(f"Missing required environment variables: {', '.join(missing_vars)}")
+
     # Pipeline options
     options = PipelineOptions([
         '--project=' + os.getenv('GOOGLE_CLOUD_PROJECT'),
