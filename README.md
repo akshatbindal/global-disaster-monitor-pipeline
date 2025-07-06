@@ -107,7 +107,7 @@ graph TD
     Training --> Prediction
     Pipelines --> Training
     Pipelines --> Prediction
-    PretrainedAPIs -.-> Dataflow_Stream  # Used within processing
+    PretrainedAPIs -.-> Dataflow_Stream  %% Used within processing
 
     PubSub_Ingest_Alerts --> StreamlitApp
     Prediction --> API_Layer
@@ -212,243 +212,268 @@ This system is built upon a microservices-style architecture on Google Cloud, de
 
 ## Data Sources
 
-The system ingests data from a variety of sources to provide a comprehensive view of potential and ongoing disasters:
-
-*   **Meteorological Data**:
-    *   Real-time weather APIs (e.g., OpenWeatherMap, AccuWeather) for temperature, precipitation, wind speed, humidity.
-    *   NOAA GOES/POES satellite data for weather patterns and storm tracking.
-    *   Doppler radar feeds for severe weather detection.
-*   **Seismic Data**:
-    *   USGS Earthquake API and other global seismological network feeds for earthquake events and magnitudes.
-    *   IoT sensors for ground motion detection in critical areas.
-*   **Hydrological Data**:
-    *   River gauge data from national/local water agencies.
-    *   Flood sensors and remote sensing data for water level monitoring.
-*   **Social Media Feeds**:
-    *   Twitter API, Facebook API (via authorized partners) for public posts related to disasters (requires careful filtering and NLP).
-    *   News APIs (e.g., GDELT, NewsAPI) for event detection and situational reports.
-*   **Satellite Imagery**:
-    *   Sentinel Hub, Landsat, Planet API for pre- and post-disaster imagery (optical and SAR).
-    *   Used for damage assessment, land use change detection, and monitoring environmental impacts.
-*   **Geospatial Data**:
-    *   OpenStreetMap, Google Maps APIs for base maps, road networks, points of interest.
-    *   Demographic data, critical infrastructure locations (hospitals, shelters).
-*   **Historical Disaster Data**:
-    *   Databases like EM-DAT, NOAA's Storm Events Database for model training and comparative analysis.
-*   **Crowdsourced Data**:
-    *   Reports from citizen science platforms or dedicated disaster reporting apps.
+The system is designed to ingest data from diverse sources for a comprehensive operational picture. These include, but are not limited to:
+*   **Environmental Sensors & APIs**: Meteorological (weather APIs, NOAA, Doppler), seismic (USGS, IoT sensors), and hydrological (river gauges, flood sensors).
+*   **Public Information Streams**: Social media (Twitter, etc. via APIs), news feeds (GDELT, NewsAPI).
+*   **Geospatial & Observational Data**: Satellite imagery (Sentinel, Landsat, Planet), mapping data (OpenStreetMap, Google Maps APIs), demographic, and critical infrastructure information.
+*   **Historical & Crowdsourced Data**: Historical disaster databases (EM-DAT) and citizen reports.
 
 ## Data Processing Stages
 
-The core data processing is handled by Apache Beam pipelines on Cloud Dataflow, encompassing several stages:
-
-1.  **Ingestion & Normalization**:
-    *   Receiving data from various Pub/Sub topics and GCS landing zones.
-    *   Parsing different data formats (JSON, XML, CSV, AVRO, binary sensor data, raster imagery).
-    *   Schema validation and transformation to a unified internal data model.
-2.  **Data Cleaning & Quality Checks**:
-    *   Handling missing values, outlier detection, and data type correction.
-    *   Duplicate record identification and merging.
-    *   Applying rules defined in Dataplex for data quality.
-3.  **Enrichment**:
-    *   **Geospatial Enrichment**: Geocoding addresses, reverse geocoding coordinates, associating data with administrative boundaries or affected areas using BigQuery GIS functions.
-    *   **Temporal Enrichment**: Aligning data to common time windows, calculating time-based features.
-    *   **Contextual Enrichment**: Joining with historical data, demographic information, or infrastructure data from BigQuery or external APIs.
-4.  **Real-time Analytics & Anomaly Detection**:
-    *   Windowing operations for time-series analysis on streaming data.
-    *   Applying statistical methods or ML models to detect unusual patterns or thresholds indicative of a potential disaster (e.g., sudden rise in water levels, unusual seismic activity).
-    *   Generating immediate alerts to a dedicated Pub/Sub topic for downstream notification systems.
-5.  **Feature Engineering for ML**:
-    *   Creating relevant features from raw and processed data for training various ML models.
-    *   Storing features in Vertex AI Feature Store for reusability and consistency.
-6.  **Batch Processing & Aggregation**:
-    *   Performing large-scale aggregations for historical analysis and reporting.
-    *   Preparing training datasets for complex ML models (e.g., image segmentation models for damage assessment).
-    *   Loading processed and aggregated data into BigQuery analytical tables.
-7.  **Output & Serving**:
-    *   Writing processed data to BigQuery for warehousing and analytics.
-    *   Pushing critical alerts and events to Pub/Sub for real-time dashboards and notifications.
-    *   Storing processed files (e.g., map tiles, processed imagery) in Cloud Storage for serving.
+Data undergoes several stages of processing, primarily using Apache Beam on Cloud Dataflow:
+1.  **Ingestion & Normalization**: Receiving and standardizing data from various formats and sources.
+2.  **Cleaning & Quality Assurance**: Handling missing/corrupt data, deduplication, and applying quality rules (potentially managed via Dataplex).
+3.  **Enrichment**: Augmenting data with geospatial context, temporal alignment, and other relevant information (e.g., from BigQuery or external APIs).
+4.  **Real-time Analytics & Anomaly Detection**: Stream processing for time-series analysis, pattern detection, and generating immediate alerts.
+5.  **ML Feature Engineering**: Creating and storing features in Vertex AI Feature Store for model training and inference.
+6.  **Batch Processing & Aggregation**: Large-scale transformations for historical analysis, ML training dataset preparation, and loading into BigQuery.
+7.  **Output & Serving**: Storing processed data in BigQuery and Cloud Storage, and pushing alerts via Pub/Sub.
 
 ## Machine Learning Models
 
-The system leverages Vertex AI to develop, deploy, and manage a suite of machine learning models:
-
-1.  **Event Detection & Early Warning**:
-    *   **Time-series forecasting models** (e.g., ARIMA, Prophet, LSTMs) on sensor data (seismic, hydrological, meteorological) to predict potential hazardous events.
-    *   **Natural Language Processing (NLP) models** (e.g., BERT-based classifiers, topic models) on social media and news feeds to detect early mentions of disasters and assess sentiment.
-2.  **Impact Assessment & Severity Prediction**:
-    *   **Computer Vision models** (e.g., CNNs like U-Net, Mask R-CNN) on satellite/aerial imagery for automated damage assessment (building damage, flood extent mapping).
-    *   **Regression models** to predict the potential economic impact or number of people affected based on event characteristics and historical data.
-3.  **Resource Allocation & Optimization**:
-    *   **Optimization models** (e.g., linear programming, reinforcement learning) to suggest optimal allocation of emergency resources (personnel, supplies, equipment) based on predicted impact and available resources.
-4.  **Information Verification & Fake News Detection**:
-    *   **Classification models** to help identify misinformation or unverified reports from social media during a crisis.
-5.  **MLOps**:
-    *   **Vertex AI Pipelines** are used to automate the entire ML workflow: data ingestion, preprocessing, feature engineering, model training, evaluation, registration, and deployment.
-    *   **Vertex AI Model Monitoring** to track model performance and detect drift or skew, triggering retraining pipelines as needed.
+Vertex AI is utilized for the end-to-end ML lifecycle, supporting models such as:
+*   **Event Detection & Early Warning**: Time-series forecasting (e.g., LSTMs) for sensor data and NLP models (e.g., BERT-based) for text sources.
+*   **Impact Assessment**: Computer vision (e.g., CNNs) for imagery analysis and regression models for predicting socio-economic impacts.
+*   **Resource Optimization**: Models to aid in efficient allocation of emergency resources.
+*   **Information Verification**: Classifiers to help identify misinformation.
+The MLOps process is managed using **Vertex AI Pipelines** and **Model Monitoring**.
 
 ## Security and Compliance
 
-Security is a critical aspect of the system, addressed through multiple layers:
-
-*   **Identity and Access Management (IAM)**: Granular control over who can access which GCP resources, adhering to the principle of least privilege. Service accounts are used for applications and services with specific roles.
-*   **VPC Service Controls**: Creates security perimeters around GCP resources to prevent data exfiltration.
-*   **Data Encryption**:
-    *   Data at rest in Cloud Storage, BigQuery, and other services is encrypted by default. Customer-Managed Encryption Keys (CMEK) via Cloud KMS can be used for enhanced control.
-    *   Data in transit is encrypted using TLS.
-*   **Secret Management**: Sensitive information like API keys, database credentials are stored in **Google Secret Manager** and accessed securely by applications.
-*   **Data Loss Prevention (DLP) API**: Used to scan and classify sensitive data within Cloud Storage and BigQuery, and to apply masking or redaction techniques if necessary.
-*   **Network Security**: Firewall rules, private Google access for services, and secure API gateways (Cloud Endpoints/Apigee).
-*   **Audit Logging**: Cloud Audit Logs provide a trail of administrative actions and data access.
-*   **Compliance**: Designed to support compliance with relevant regulations (e.g., GDPR, HIPAA, if applicable to the data being processed) through GCP's compliance certifications and provided tools. Regular security assessments and penetration testing are recommended.
+System security is multi-layered, leveraging GCP's robust infrastructure:
+*   **Access Control**: Strict IAM policies and service accounts with least-privilege.
+*   **Network Security**: VPC Service Controls for perimeter defense, firewall rules, and secure API gateways.
+*   **Data Protection**: Encryption at rest (default, CMEK option via Cloud KMS) and in transit (TLS). Sensitive data like API keys are managed via **Google Secret Manager**.
+*   **Data Governance**: **DLP API** for scanning/classifying sensitive data. **Dataplex** can be used for broader data governance.
+*   **Auditing & Compliance**: Cloud Audit Logs track activities. The system is designed to support compliance with relevant standards via GCP's certifications.
 
 ## Monitoring and Alerting
 
-Comprehensive monitoring and alerting are implemented using Cloud Operations Suite:
-
-*   **Cloud Monitoring**:
-    *   Collects metrics from all GCP services used (Dataflow, Pub/Sub, BigQuery, Vertex AI, Cloud Run, etc.).
-    *   Custom metrics from applications and data pipelines.
-    *   Dashboards for visualizing system health, data pipeline throughput, ML model performance, and resource utilization.
-    *   Alerting policies based on thresholds, anomalies, or specific log patterns to notify operations teams of issues or critical events.
-*   **Cloud Logging**:
-    *   Centralized logging for all services and applications.
-    *   Log-based metrics and alerts.
-    *   Integration with BigQuery for advanced log analysis.
-*   **Application Performance Management (APM)**: Cloud Trace and Profiler can be used for debugging and performance optimization of custom applications.
+The Cloud Operations Suite provides comprehensive monitoring:
+*   **Cloud Monitoring**: Collects metrics from all GCP services and custom applications, with dashboards and alerting policies.
+*   **Cloud Logging**: Centralized logging with capabilities for log-based metrics and advanced analysis in BigQuery.
+*   **APM Tools**: Cloud Trace and Profiler for performance diagnostics.
 
 ## Scalability and Reliability
 
-The system is designed for high scalability and reliability:
-
-*   **Managed Services**: Leverages GCP's managed services (Dataflow, BigQuery, Pub/Sub, Vertex AI, Cloud Run) which offer auto-scaling capabilities and built-in fault tolerance.
-*   **Serverless Architecture**: Cloud Functions and Cloud Run scale automatically based on load, from zero to many instances.
-*   **Dataflow Autoscaling**: Dataflow pipelines can automatically scale worker resources up or down based on workload. Streaming pipelines use features like Streaming Engine for improved performance and scalability.
-*   **BigQuery**: Scales seamlessly to handle petabytes of data and complex queries.
-*   **Global Infrastructure**: GCP's global network and regional resource deployment options allow for high availability and disaster recovery configurations.
-*   **Redundancy**: Pub/Sub topics and BigQuery datasets can be configured for regional or multi-regional redundancy. Cloud Storage offers various storage classes with different redundancy options.
-*   **Infrastructure as Code (IaC)**: Terraform allows for repeatable and reliable infrastructure deployment and updates.
+The architecture prioritizes scalability and reliability by:
+*   Utilizing GCP's auto-scaling and fault-tolerant managed services (Dataflow, BigQuery, Pub/Sub, Vertex AI, Cloud Run).
+*   Employing serverless components (Cloud Functions, Cloud Run) that scale on demand.
+*   Leveraging BigQuery's massive scalability for data warehousing and analytics.
+*   Designing for redundancy with GCP's regional/multi-regional options for services like Pub/Sub, BigQuery, and Cloud Storage.
+*   Using Infrastructure as Code (Terraform) for consistent deployments.
 *   **CI/CD Pipelines**: Automated build, test, and deployment processes using Cloud Build reduce manual errors and ensure consistency.
 
-## Quick Start
+## Running the Project
 
-This section provides a high-level overview of the deployment process. Detailed instructions for each component can be found in their respective directories and in the `deployment/` folder.
+This section guides you through setting up and deploying the Real-Time Disaster Alert & Impact Assessment System.
 
-1.  **Prerequisites**:
-    *   Google Cloud SDK installed and configured.
-    *   Terraform installed.
-    *   Python 3.8+ and pip installed.
-    *   Access to a Google Cloud Project with billing enabled.
-    *   Required APIs enabled (see `infrastructure/main.tf` or scripts for details).
-2.  **Set up Environment Variables**: Copy `.env.example` to `.env` and populate with your project-specific values.
-3.  **Deploy Infrastructure**: Navigate to `infrastructure/` and run `terraform init` followed by `terraform apply`. This will provision core resources like GCS buckets, Pub/Sub topics, BigQuery datasets, VPC networks, etc.
-4.  **Deploy Data Ingestion Components**:
-    *   Deploy Cloud Functions: Refer to `data-ingestion/functions/` and use `gcloud functions deploy...` or provided scripts.
-    *   Configure Data Transfer Service jobs if needed.
-5.  **Deploy Data Processing Pipelines**:
-    *   Build and deploy Dataflow templates: Refer to `dataflow-pipeline/` (both streaming and batch).
-    *   Schedule Dataflow jobs or set up triggers.
-    *   Deploy Dataproc cluster configurations if used.
-6.  **Deploy ML Models & Pipelines**:
-    *   Run Vertex AI training pipelines: Refer to `ml-model/pipelines/`.
-    *   Deploy trained models to Vertex AI Endpoints.
-    *   Configure Vertex AI Feature Store.
-7.  **Deploy Web Application & APIs**:
-    *   Build and deploy the Streamlit web application to Cloud Run: Refer to `webapp/`.
-    *   Configure Cloud Endpoints or Apigee for the API layer if applicable.
-8.  **Configure Orchestration**:
-    *   Deploy DAGs to Cloud Composer: Refer to `orchestration/dags/`.
-9.  **Set up Monitoring & Alerting**:
-    *   Create custom dashboards and alert policies in Cloud Monitoring.
+### Prerequisites
+
+1.  **Google Cloud SDK**: Install and initialize the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install). Ensure you have authenticated and set your default project.
+    ```bash
+    gcloud init
+    gcloud auth application-default login
+    ```
+2.  **Terraform**: Install [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli) (version specified in `infrastructure/versions.tf` or project docs, if any).
+3.  **Python**: Install Python (e.g., 3.8 or as specified in component `requirements.txt` files).
+4.  **GCP Project**: Have a Google Cloud Project with billing enabled.
+5.  **Enable APIs**: Ensure the necessary APIs are enabled for your project. This typically includes:
+    *   Cloud Resource Manager API
+    *   Compute Engine API
+    *   BigQuery API
+    *   Pub/Sub API
+    *   Cloud Storage API
+    *   Dataflow API
+    *   Vertex AI API
+    *   Cloud Functions API
+    *   Cloud Run API
+    *   Cloud Build API
+    *   IAM API
+    *   Secret Manager API
+    *   (and any others used by specific components like Geocoding API)
+    You can enable them via the GCP Console or using `gcloud services enable [SERVICE_NAME]`. The Terraform scripts in `infrastructure/` should also enable required service APIs.
+
+### Setup and Deployment Steps
+
+1.  **Clone the Repository**:
+    ```bash
+    git clone <repository-url>
+    cd <repository-name>
+    ```
+
+2.  **Set up Environment Variables**:
+    *   Copy the example environment file:
+        ```bash
+        cp env.example .env
+        ```
+    *   Edit the `.env` file and populate it with your specific GCP project ID, bucket names, API keys, and other configurations as detailed in the "Environment Variables" section. **Remember to source this file or ensure these variables are available in your shell environment before running deployment scripts if they rely on them.**
+        ```bash
+        # Example: source .env
+        # (Note: .env files are typically gitignored and used for local development. For CI/CD, use service-specific secret management)
+        ```
+
+3.  **Deploy Infrastructure**:
+    *   The core infrastructure (VPC, BigQuery datasets, Pub/Sub topics, GCS buckets, IAM roles) is provisioned using Terraform.
+    *   Navigate to the infrastructure directory and run Terraform:
+        ```bash
+        cd infrastructure/
+        terraform init
+        terraform plan
+        terraform apply
+        cd ..
+        ```
+    *   Alternatively, use the provided deployment script if it wraps these commands:
+        ```bash
+        ./deployment/deploy-infrastructure.sh
+        ```
+
+4.  **Deploy Application Components**:
+    *   The `deployment/` directory contains scripts to deploy individual components. It's recommended to inspect these scripts before running.
+    *   The `deploy-all.sh` script might provide a way to deploy all components sequentially.
+        ```bash
+        ./deploy-all.sh
+        ```
+    *   **Individual Component Deployment (Example Order)**:
+        *   **Data Ingestion (Cloud Functions)**:
+            ```bash
+            ./deployment/deploy-data-ingestion.sh
+            ```
+            (This script likely uses `gcloud functions deploy` based on code in `data-ingestion/`)
+        *   **Dataflow Pipeline**:
+            ```bash
+            ./deployment/deploy-dataflow.sh
+            ```
+            (This script would package the pipeline in `dataflow-pipeline/` and deploy it to Dataflow, potentially as a template or a running job)
+        *   **ML Model (Vertex AI)**:
+            ```bash
+            ./deployment/deploy-ml-model.sh
+            ```
+            (This script would handle training the model from `ml-model/` and deploying it to a Vertex AI Endpoint)
+        *   **Web Application (Cloud Run)**:
+            ```bash
+            ./deployment/deploy-webapp.sh
+            ```
+            (This script would build the Docker container from `webapp/Dockerfile` and deploy it to Cloud Run)
+
+5.  **Load Sample Data (Optional)**:
+    *   If you want to populate the system with sample data:
+        ```bash
+        ./deployment/load-sample-data.sh
+        ```
+
+6.  **Accessing the System**:
+    *   **Web Application**: Once deployed, the URL for the Streamlit web application on Cloud Run will be provided by the deployment script or can be found in the GCP Console.
+    *   **BigQuery**: Data can be queried directly in the BigQuery console.
+    *   **Looker/Looker Studio**: Dashboards would need to be configured to point to your BigQuery datasets/tables.
+
+### Running Components Locally (Development)
+
+*   **Streamlit Webapp**:
+    ```bash
+    cd webapp/
+    pip install -r requirements.txt
+    # Ensure necessary environment variables are set (e.g., for BigQuery access if needed locally)
+    streamlit run app.py
+    ```
+*   **Dataflow Pipelines (Direct Runner)**: Apache Beam pipelines can often be tested locally using the `DirectRunner`. Refer to the `dataflow-pipeline/` directory and Beam documentation.
+*   **Cloud Functions**: Can be tested locally using the [Cloud Functions Emulator](https://cloud.google.com/functions/docs/running/calling#local_emulator) or framework-specific tools.
+
+### Important Notes:
+*   Review each deployment script in the `deployment/` directory to understand its specific actions and prerequisites.
+*   Ensure your GCP user or service account has the necessary IAM permissions to deploy and manage all the resources.
+*   The `.ps1` scripts in the `deployment/` directory are for Windows PowerShell users.
 
 ## Project Structure
 
-The project is organized to separate concerns for different components of the system:
+The project is organized as follows:
 
 ```
-├── infrastructure/          # Terraform code for GCP resource provisioning (VPC, Buckets, BigQuery Datasets, Pub/Sub, IAM)
-│   ├── modules/             # Reusable Terraform modules
-│   └── main.tf              # Main infrastructure configuration
-├── data-ingestion/          # Components for ingesting data from various sources
-│   ├── functions/           # Cloud Functions for lightweight, event-driven data handling
-│   ├── data-transfer-configs/ # Configurations for GCP Data Transfer Service
-│   └── scripts/             # Helper scripts for deployment or setup
-├── dataflow-pipeline/       # Apache Beam pipelines for stream and batch processing
-│   ├── streaming/           # Real-time data processing pipelines
-│   ├── batch/               # Batch data processing pipelines
-│   └── templates/           # Dataflow templates
-├── dataproc-jobs/           # Spark jobs or other configurations for Cloud Dataproc (if used)
-│   └── pyspark/
-├── ml-model/                # Machine Learning models, training, and deployment resources
-│   ├── training/            # Scripts and notebooks for model training (e.g., TensorFlow, PyTorch, Scikit-learn)
-│   ├── pipelines/           # Vertex AI Pipeline definitions (e.g., Kubeflow Pipelines DSL)
-│   ├── feature-store/       # Configurations for Vertex AI Feature Store
-│   └── serving/             # Code for custom prediction routines or model deployment
-├── orchestration/           # Workflow orchestration using Cloud Composer (Apache Airflow)
-│   └── dags/                # Airflow DAG definitions
-├── webapp/                  # Streamlit web application for visualization and interaction
-│   ├── pages/
-│   └── main_app.py
-├── api/                     # API definitions and configurations (e.g., Cloud Endpoints, Apigee)
-├── deployment/              # Deployment scripts, CI/CD configurations (Cloud Build YAMLs)
-│   ├── cloudbuild/
-│   └── scripts/
-├── docs/                    # System documentation, design documents, and user guides
-├── tests/                   # Unit, integration, and end-to-end tests
-│   ├── unit/
-│   └── integration/
-├── .env.example             # Example environment variables file
-└── README.md                # This file
+├── .gitignore               # Specifies intentionally untracked files that Git should ignore
+├── DEPLOYMENT_SUMMARY.md    # Summary of deployment procedures or status
+├── LICENSE                  # Project license file
+├── README.md                # This file
+├── data-ingestion/          # Scripts for data ingestion (e.g., Cloud Functions source)
+│   ├── main.py              # Main Python script for data ingestion logic
+│   └── requirements.txt     # Python dependencies for data ingestion
+├── dataflow-pipeline/       # Apache Beam pipeline for data processing on Dataflow
+│   ├── pipeline.py          # Main Python script for the Beam pipeline
+│   ├── requirements.txt     # Python dependencies for the Dataflow pipeline
+│   └── setup.py             # Setup script for packaging the Dataflow pipeline
+├── deploy-all.sh            # Master script to deploy all components
+├── deployment/              # Deployment scripts for various components
+│   ├── deploy-data-ingestion.sh # Script to deploy data ingestion components
+│   ├── deploy-dataflow.sh     # Script to deploy Dataflow pipeline
+│   ├── deploy-infrastructure.sh # Script to deploy GCP infrastructure (likely using Terraform)
+│   ├── deploy-ml-model.sh     # Script to deploy the ML model
+│   ├── deploy-webapp.sh       # Script to deploy the web application
+│   ├── load-sample-data.sh    # Script to load sample data
+│   └── *.ps1                  # PowerShell equivalents for Windows users
+├── docs/                    # Documentation files
+│   └── SETUP.md             # Setup and installation instructions
+├── env.example              # Example file for environment variables
+├── infrastructure/          # Terraform code for GCP resource provisioning
+│   ├── main.tf              # Main Terraform configuration file
+│   ├── variables.tf         # Terraform variable definitions
+│   └── schemas/             # Directory for data schemas
+│       ├── demographics.json
+│       └── disaster_events.json
+├── ml-model/                # Machine Learning model code and training scripts
+│   ├── train_model.py       # Python script for training the ML model
+│   └── requirements.txt     # Python dependencies for the ML model
+└── webapp/                  # Streamlit web application
+    ├── app.py               # Main Python script for the Streamlit app
+    ├── Dockerfile           # Dockerfile for containerizing the webapp
+    └── requirements.txt     # Python dependencies for the webapp
 ```
 
 ## Environment Variables
 
-Create a `.env` file by copying `.env.example` and populate it with your specific configuration. Key variables include:
+Create a `.env` file in the root directory by copying the `env.example` file:
+
+```bash
+cp env.example .env
+```
+
+Then, populate the `.env` file with your specific configuration values. The required variables are:
 
 ```
-# GCP Configuration
+# Google Cloud Configuration
 GOOGLE_CLOUD_PROJECT=your-project-id
-GCP_REGION=your-gcp-region # e.g., us-central1
-GCP_ZONE=your-gcp-zone   # e.g., us-central1-a
+GOOGLE_CLOUD_REGION=us-central1
 
-# BigQuery
-BIGQUERY_DATASET_RAW=disaster_monitor_raw
-BIGQUERY_DATASET_PROCESSED=disaster_monitor_processed
-BIGQUERY_DATASET_ML_FEATURES=disaster_monitor_ml_features
+# BigQuery Configuration
+BIGQUERY_DATASET=disaster_monitor
+BIGQUERY_TABLE_EVENTS=disaster_events
+BIGQUERY_TABLE_DEMOGRAPHICS=demographics
 
-# Pub/Sub Topics
-PUBSUB_TOPIC_INGEST_EVENTS=disaster-raw-events # For generic incoming events
-PUBSUB_TOPIC_WEATHER_ALERTS=weather-alerts-stream
-PUBSUB_TOPIC_SOCIAL_MEDIA=social-media-feed
-PUBSUB_TOPIC_PROCESSED_ALERTS=disaster-processed-alerts # For alerts generated by Dataflow
+# Pub/Sub Configuration
+PUBSUB_TOPIC=disaster-alerts
+PUBSUB_SUBSCRIPTION=disaster-alerts-sub
 
-# Cloud Storage Buckets
-GCS_BUCKET_RAW_DATA=gs://your-project-id-raw-data-lake
-GCS_BUCKET_PROCESSED_DATA=gs://your-project-id-processed-data
-GCS_BUCKET_DATAFLOW_STAGING=gs://your-project-id-dataflow-staging
-GCS_BUCKET_DATAFLOW_TEMPLATES=gs://your-project-id-dataflow-templates
-GCS_BUCKET_ML_MODELS=gs://your-project-id-ml-models
-GCS_BUCKET_TERRAFORM_STATE=gs://your-project-id-tf-state # For remote Terraform state
+# Dataflow Configuration
+DATAFLOW_JOB_NAME=disaster-pipeline
+DATAFLOW_TEMP_LOCATION=gs://your-bucket/temp  # Replace 'your-bucket' with your GCS bucket name
+DATAFLOW_STAGING_LOCATION=gs://your-bucket/staging # Replace 'your-bucket' with your GCS bucket name
+DATAFLOW_SERVICE_ACCOUNT=dataflow-sa@your-project-id.iam.gserviceaccount.com # Replace with your Dataflow SA
 
-# Dataflow
-DATAFLOW_STREAMING_JOB_NAME=disaster-streaming-pipeline
-DATAFLOW_BATCH_JOB_NAME_PREFIX=disaster-batch-job
-DATAFLOW_SERVICE_ACCOUNT=your-dataflow-sa@your-project-id.iam.gserviceaccount.com
+# API Keys (Store sensitive keys in Secret Manager in a real deployment)
+USGS_API_BASE_URL=https://earthquake.usgs.gov/earthquakes/feed/v1.0
+NASA_EONET_API_BASE_URL=https://eonet.gsfc.nasa.gov/api/v3
+GOOGLE_GEOCODING_API_KEY=your-geocoding-api-key # Replace with your actual API key
 
-# Vertex AI
-VERTEX_AI_PIPELINE_ROOT=gs://your-project-id-vertex-pipelines
-VERTEX_AI_SERVICE_ACCOUNT=your-vertex-ai-sa@your-project-id.iam.gserviceaccount.com
+# Vertex AI Configuration
+VERTEX_AI_MODEL_NAME=disaster-impact-model
+VERTEX_AI_ENDPOINT_NAME=disaster-impact-endpoint
 
-# Cloud Run (Webapp)
+# Cloud Run Configuration
 WEBAPP_SERVICE_NAME=disaster-monitor-webapp
-
-# Add other service-specific variables as needed
-# E.g., API keys for external data sources (ensure these are managed securely, e.g., via Secret Manager)
-# EXTERNAL_WEATHER_API_KEY=your_api_key
-# SOCIAL_MEDIA_API_TOKEN=your_token
+WEBAPP_PORT=8080
 ```
-Ensure sensitive values like API keys are managed using Google Secret Manager and referenced in configurations, not hardcoded.
+
+**Important**:
+*   Replace placeholder values like `your-project-id`, `your-bucket`, and `your-geocoding-api-key` with your actual configuration.
+*   For production environments, sensitive values such as `GOOGLE_GEOCODING_API_KEY` should be stored securely in [Google Secret Manager](https://cloud.google.com/secret-manager) and accessed by the services at runtime, rather than being hardcoded in the `.env` file or committed to version control. The `.env` file is typically added to `.gitignore`.
 
 ## Contributing
 
