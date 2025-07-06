@@ -9,6 +9,7 @@ terraform {
 }
 
 provider "google" {
+  credentials = file("terraform-key.json")  # OR use ADC if local
   project = var.project_id
   region  = var.region
 }
