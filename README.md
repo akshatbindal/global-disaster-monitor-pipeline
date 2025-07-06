@@ -2,169 +2,52 @@
 
 A comprehensive system for real-time disaster monitoring, advanced data processing, predictive analytics, and automated impact assessment, leveraging a sophisticated suite of Google Cloud Platform services. This project aims to provide timely and actionable insights to mitigate disaster risks and optimize response efforts.
 
-## Detailed Architecture
+## Core Architecture Flow
 
-```mermaid
-graph TD
-    subgraph "External Data Sources"
-        DS1[Weather APIs]
-        DS2[Seismic Sensors/APIs]
-        DS3[Social Media Feeds]
-        DS4[Satellite Imagery Providers]
-        DS5[IoT Devices]
-        DS6[Historical Databases]
-    end
+The following diagram illustrates the high-level flow of data and major components:
 
-    subgraph "Data Ingestion Layer (GCP)"
-        direction LR
-        GCS_Raw[GCS Buckets: Raw Data Lake]
-        PubSub_Ingest[Pub/Sub: Real-time Streams]
-        Functions[Cloud Functions: Lightweight Processing/Triggers]
-        DataTransfer[Data Transfer Service: Batch Imports]
-    end
-
-    subgraph "Data Processing Layer (GCP)"
-        direction LR
-        Dataflow_Stream[Dataflow: Streaming ETL & Analytics]
-        Dataflow_Batch[Dataflow: Batch ETL & ML Prep]
-        Dataproc[Dataproc: Spark/Hadoop Processing]
-    end
-
-    subgraph "Data Storage & Governance Layer (GCP)"
-        direction LR
-        GCS_Processed[GCS Buckets: Processed Data]
-        BigQuery[BigQuery: Data Warehouse & Analytics Engine]
-        Dataplex[Dataplex: Data Governance & Metadata]
-    end
-
-    subgraph "Machine Learning Platform (Vertex AI - GCP)"
-        direction LR
-        FeatureStore[Vertex AI Feature Store]
-        Training[Vertex AI Training Custom Models]
-        Pipelines[Vertex AI Pipelines MLOps]
-        Prediction[Vertex AI Prediction Endpoints/Batch]
-        PretrainedAPIs[Vision AI, NLP AI]
-    end
-
-    subgraph "Serving & Visualization Layer (GCP & Custom)"
-        direction LR
-        Looker[Looker/Looker Studio: Dashboards]
-        StreamlitApp[Streamlit App on Cloud Run: Interactive UI]
-        API_Layer[API Layer: Cloud Endpoints/Apigee]
-    end
-
-    subgraph "Orchestration, Monitoring & Security (GCP)"
-        direction TB
-        Composer[Cloud Composer: Workflow Orchestration]
-        Monitoring[Cloud Monitoring: Metrics & Alerts]
-        Logging[Cloud Logging: Log Management]
-        IAM[IAM: Access Control]
-        KMS[KMS: Key Management]
-        VPC_SC[VPC Service Controls]
-        SecretManager[Secret Manager]
-    end
-
-    %% Connections
-    DS1 --> PubSub_Ingest
-    DS2 --> PubSub_Ingest
-    DS3 --> PubSub_Ingest
-    DS5 --> PubSub_Ingest
-    DS4 --> GCS_Raw
-    DS6 --> DataTransfer
-    DataTransfer --> GCS_Raw
-
-    PubSub_Ingest --> Dataflow_Stream
-    GCS_Raw --> Dataflow_Stream
-    GCS_Raw --> Dataflow_Batch
-    GCS_Raw --> Dataproc
-
-    Dataflow_Stream --> BigQuery
-    Dataflow_Stream --> GCS_Processed
-    Dataflow_Stream --> PubSub_Ingest_Alerts[Pub/Sub: Processed Alerts]
-    Dataflow_Batch --> BigQuery
-    Dataflow_Batch --> GCS_Processed
-    Dataproc --> BigQuery
-    Dataproc --> GCS_Processed
-
-    BigQuery --> Looker
-    BigQuery --> StreamlitApp
-    BigQuery --> API_Layer
-    BigQuery --> FeatureStore
-    GCS_Processed --> FeatureStore
-
-    FeatureStore --> Training
-    Training --> Prediction
-    Pipelines --> Training
-    Pipelines --> Prediction
-    PretrainedAPIs -.-> Dataflow_Stream
-
-    PubSub_Ingest_Alerts --> StreamlitApp
-    Prediction --> API_Layer
-    Prediction --> StreamlitApp
-
-    %% Linking to Orchestration, Monitoring, Security (conceptual links)
-    Dataflow_Stream -.-> Composer
-    Dataflow_Batch -.-> Composer
-    Pipelines -.-> Composer
-
-    GCS_Raw -.-> Dataplex
-    BigQuery -.-> Dataplex
-
-    DS1 -.-> IAM & SecretManager
-    Functions -.-> IAM & SecretManager
-    Dataflow_Stream -.-> Monitoring & Logging & IAM
-    Dataflow_Batch -.-> Monitoring & Logging & IAM
-    Dataproc -.-> Monitoring & Logging & IAM
-    BigQuery -.-> Monitoring & Logging & IAM & KMS & VPC_SC
-    GCS_Raw -.-> Monitoring & Logging & IAM & KMS & VPC_SC
-    VertexAI_Platform[Vertex AI Platform] -.-> Monitoring & Logging & IAM & KMS
-    StreamlitApp -.-> Monitoring & Logging & IAM
-    API_Layer -.-> Monitoring & Logging & IAM
-    Composer -.-> Monitoring & Logging & IAM
-
-    FeatureStore -.-> VertexAI_Platform
-    Training -.-> VertexAI_Platform
-    Pipelines -.-> VertexAI_Platform
-    Prediction -.-> VertexAI_Platform
-    PretrainedAPIs -.-> VertexAI_Platform
-
-end
+```text
+[External Data Sources] ----> | APIs, Feeds, Files | ----> [GCP Ingestion Services]
+ (Weather, Seismic,                                         (Cloud Pub/Sub,
+  Social Media,                                              Cloud Storage,
+  Satellite Imagery)                                         Cloud Functions)
+                                                                    |
+                                                                    | (Raw & Streamed Data)
+                                                                    v
+                                          [GCP Processing & Transformation]
+                                             (Cloud Dataflow: Stream/Batch)
+                                                                    |
+                                                                    | (Processed Data, Features)
+                                                                    v
+                                             [GCP Data Storage & Analytics]
+                                               (BigQuery: Data Warehouse,
+                                                Cloud Storage: Data Lake)
+                                                        |        ^
+                                                        |        | (ML Features)
+                                                        |        |
+                                     +------------------v--------+
+                                     | GCP Machine Learning      |
+                                     | (Vertex AI: Training,     |
+                                     |  Prediction, Pipelines,   |
+                                     |  Feature Store)           |
+                                     +------------------^--------+
+                                                        |        | (Predictions, Insights)
+                                                        |        |
+                                                        v        |
+                                          [GCP Serving & Visualization]
+                                             (Cloud Run: Web App,
+                                              Looker Studio: Dashboards,
+                                              Pub/Sub: Alerts)
 ```
 
-This diagram uses [Mermaid syntax](https://mermaid.js.org/syntax/flowchart.html) which can be rendered by many Markdown viewers (including GitHub).
+**Brief Explanation:**
 
-**Explanation of the Diagram:**
-
-*   **External Data Sources**: Various inputs like weather APIs, sensors, social media, satellite imagery, IoT devices, and historical databases.
-*   **Data Ingestion Layer (GCP)**:
-    *   **GCS Buckets (Raw Data Lake)**: Stores raw data from batch sources like satellite imagery and historical DBs (via Data Transfer Service).
-    *   **Pub/Sub (Real-time Streams)**: Ingests real-time data from APIs, sensors, social media, and IoT.
-    *   **Cloud Functions**: Used for lightweight pre-processing or as triggers for ingestion workflows.
-    *   **Data Transfer Service**: For scheduled batch imports into GCS.
-*   **Data Processing Layer (GCP)**:
-    *   **Dataflow (Streaming)**: Processes real-time streams from Pub/Sub and GCS for ETL, analytics, and alert generation. Can also use Pre-trained AI APIs.
-    *   **Dataflow (Batch)**: Handles large-scale batch ETL and prepares data for ML training from GCS.
-    *   **Dataproc**: For specialized Spark/Hadoop processing on data in GCS.
-*   **Data Storage & Governance Layer (GCP)**:
-    *   **GCS Buckets (Processed Data)**: Stores outputs from Dataflow/Dataproc.
-    *   **BigQuery**: The central data warehouse, stores structured/processed data, serves analytics, and feeds the ML Feature Store.
-    *   **Dataplex**: Manages governance, metadata, and data quality across GCS and BigQuery.
-*   **Machine Learning Platform (Vertex AI - GCP)**:
-    *   **Vertex AI Feature Store**: Manages and serves features for ML models, sourced from BigQuery and GCS.
-    *   **Vertex AI Training**: Trains custom ML models.
-    *   **Vertex AI Pipelines**: Orchestrates MLOps workflows.
-    *   **Vertex AI Prediction**: Serves trained models via endpoints or batch predictions.
-    *   **Pre-trained APIs (Vision, NLP)**: Leveraged within Dataflow or other services for specific tasks.
-*   **Serving & Visualization Layer (GCP & Custom)**:
-    *   **Looker/Looker Studio**: For BI dashboards and reporting from BigQuery.
-    *   **Streamlit App on Cloud Run**: Provides an interactive UI, consuming data from BigQuery, Pub/Sub (alerts), and Vertex AI Prediction.
-    *   **API Layer (Cloud Endpoints/Apigee)**: Exposes data or model predictions from BigQuery and Vertex AI.
-*   **Orchestration, Monitoring & Security (GCP)**:
-    *   **Cloud Composer**: Orchestrates Dataflow jobs, Vertex AI Pipelines, etc.
-    *   **Cloud Monitoring & Logging**: Centralized monitoring, logging, and alerting for all services.
-    *   **IAM, KMS, VPC Service Controls, Secret Manager**: Core security services ensuring access control, key management, perimeter security, and secure secret storage. These are pervasive and apply to most services.
-
-This textual diagram provides a structured overview. In a live GitHub environment, the Mermaid syntax would render a visual graph.
+1.  **Data Sources**: Various external sources provide disaster-related data.
+2.  **GCP Ingestion**: Data is ingested into Google Cloud using services like Pub/Sub for streams, Cloud Storage for batch files, and Cloud Functions for lightweight processing or triggers.
+3.  **GCP Processing**: Cloud Dataflow is the primary engine for both stream and batch data processing, handling transformations, cleaning, and feature engineering.
+4.  **GCP Storage & Analytics**: Processed data and ML features are stored in BigQuery (for structured analytics) and Cloud Storage (as a data lake).
+5.  **GCP Machine Learning**: Vertex AI is used for the full ML lifecycle – training models, serving predictions, managing features, and orchestrating MLOps pipelines.
+6.  **GCP Serving & Visualization**: Insights, predictions, and alerts are delivered via a web application (on Cloud Run), dashboards (Looker Studio), and real-time alerts (Pub/Sub).
 
 ## Project Goal and Workflow
 
