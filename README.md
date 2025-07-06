@@ -2,6 +2,9 @@
 
 A comprehensive system for real-time disaster monitoring, advanced data processing, predictive analytics, and automated impact assessment, leveraging a sophisticated suite of Google Cloud Platform services. This project aims to provide timely and actionable insights to mitigate disaster risks and optimize response efforts.
 
+![image](https://github.com/user-attachments/assets/09e996a7-7a82-45ed-aee8-823fe9fb1448)
+
+
 ## Core Architecture Flow
 
 The following diagram illustrates the high-level flow of data and major components:
