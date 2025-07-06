@@ -1,0 +1,68 @@
+[
+  {
+    "name": "location_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Unique identifier for the location"
+  },
+  {
+    "name": "latitude",
+    "type": "FLOAT64",
+    "mode": "REQUIRED",
+    "description": "Latitude coordinate"
+  },
+  {
+    "name": "longitude",
+    "type": "FLOAT64",
+    "mode": "REQUIRED",
+    "description": "Longitude coordinate"
+  },
+  {
+    "name": "address",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Human-readable address"
+  },
+  {
+    "name": "population_density",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Population density per square kilometer"
+  },
+  {
+    "name": "total_population",
+    "type": "INT64",
+    "mode": "NULLABLE",
+    "description": "Total population in the area"
+  },
+  {
+    "name": "area_km2",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Area in square kilometers"
+  },
+  {
+    "name": "hospitals_count",
+    "type": "INT64",
+    "mode": "NULLABLE",
+    "description": "Number of hospitals in the area"
+  },
+  {
+    "name": "schools_count",
+    "type": "INT64",
+    "mode": "NULLABLE",
+    "description": "Number of schools in the area"
+  },
+  {
+    "name": "critical_infrastructure",
+    "type": "STRING",
+    "mode": "REPEATED",
+    "description": "List of critical infrastructure in the area"
+  },
+  {
+    "name": "last_updated",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED",
+    "description": "Timestamp when this data was last updated"
+  }
+] 
