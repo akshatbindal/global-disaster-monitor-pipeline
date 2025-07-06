@@ -82,6 +82,7 @@ tfplan
 *.tfvars
 *.tfvars.json
 terraform.tfplan
+.terraform.lock.hcl
 
 # Google Cloud
 *.json
